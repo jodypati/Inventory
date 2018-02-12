@@ -7,7 +7,6 @@ import (
 	"time"
 	"bytes"
 	"strconv"
-	"strings"
 )
 
 type Barangkeluar struct {
@@ -52,7 +51,7 @@ func PostBarangkeluar(c *gin.Context) {
 	if barangkeluar.SKU != "" && barangkeluar.ItemName != "" && barangkeluar.StockOut >= 0 && barangkeluar.SellingPrice >= 0 && barangkeluar.ReceiptNumber != "" && barangkeluar.Notes != "" {
 		t := time.Now()
 		barangkeluar.Time = t
-		var buffer bytes.Buffer
+		//var buffer bytes.Buffer
 		//buffer.WriteString("Pesanan ID-")
 		//buffer.WriteString(t.Format("20060102"))
 		//buffer.WriteString("-")
@@ -143,8 +142,8 @@ func UpdateBarangkeluar(c *gin.Context) {
 				SellingPrice: barangkeluar.SellingPrice,
 				Total: newBarangkeluar.Total,
 				ReceiptNumber:	barangkeluar.ReceiptNumber, 
-				StockOut: int(newBarangkeluar.StockOut),
-				Notes: newBarangkeluar.StockOut,
+				StockOut: newBarangkeluar.StockOut,
+				Notes: newBarangkeluar.Notes,
 			}
 
 			// UPDATE barangkeluars SET firstname='newBarangkeluar.Firstname', lastname='newBarangkeluar.Lastname' WHERE id = barangkeluar.Id;

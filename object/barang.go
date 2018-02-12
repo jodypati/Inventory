@@ -4,7 +4,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
 	_ "github.com/mattn/go-sqlite3"
-	"time"
 )
 type Barangs struct {
 	Id        	int    `gorm:"AUTO_INCREMENT" form:"id" json:"id"`
@@ -18,7 +17,7 @@ type Header struct {
 	ItemsAmount int `gorm:"not null" form:"itemsamount" json:"itemsamount"`
 	GoodsAmount float64 `gorm:"not null" form:"goodsamount" json:"goodsamount"`
 	ValueTotal float64 `gorm:"not null" form:"valuetotal" json:"valuetotal"`
-	Detail *Detail `gorm:"not null" form:"details" json:"details"`
+	Detail *Detail `gorm:"not null" form:"detail" json:"detail"`
 }
 
 type Detail struct {
@@ -181,28 +180,28 @@ func OptionsBarang(c *gin.Context) {
 
 func GoodsValueReport(c *gin.Context) {
 	// Connection to the database
-	db := InitDbBarang()
-	// Close connection database
-	defer db.Close()
-	var details []Detail
-	var header Header
-	var itemsAmount int
-	var goodsAmount float64
-	var valueTotal float64
-	db.Exec("select b.sku,b.itemname,b.quantity,SUM(total)/SUM(amountreceived) AveragePrice, AveragePrice*b.quantity total from Barangs b,Barangmasuks bm where b.SKU=bm.SKU group by b.sku,b.itemname,b.quantity").Scan(&details)
-	db.Exec("select count(sku) from Barangs").Scan(&itemsAmount)
-	db.Exec("select sum(quantity) from Barangs").Scan(&goodsAmount)
-	db.Exec("select sum(quantity) from Barangs").Scan(&valueTotal)
-	db.Exec("select sum(totalnilai) from (select b.sku,SUM(total)/SUM(amountreceived)*b.quantity as totalnilai from Barangs b,Barangmasuks bm where b.SKU=bm.SKU group by b.sku,b.itemname,b.quantity)").Scan(&valueTotal)
-	t := time.Now()
-	result := Header{
-		Date: t.Format("20060102"),
-		ItemsAmount: itemsAmount,
-		GoodsAmount: goodsAmount,
-		ValueTotal: valueTotal,
-		Detail: &details,
-	}
+	// db := InitDbBarang()
+	// // Close connection database
+	// defer db.Close()
+	// var details []Detail
+	// var header Header
+	// var itemsAmount int
+	// var goodsAmount float64
+	// var valueTotal float64
+	// db.Exec("select b.sku,b.itemname,b.quantity,SUM(total)/SUM(amountreceived) AveragePrice, AveragePrice*b.quantity total from Barangs b,Barangmasuks bm where b.SKU=bm.SKU group by b.sku,b.itemname,b.quantity").Scan(&details)
+	// db.Exec("select count(sku) from Barangs").Scan(&itemsAmount)
+	// db.Exec("select sum(quantity) from Barangs").Scan(&goodsAmount)
+	// db.Exec("select sum(quantity) from Barangs").Scan(&valueTotal)
+	// db.Exec("select sum(totalnilai) from (select b.sku,SUM(total)/SUM(amountreceived)*b.quantity as totalnilai from Barangs b,Barangmasuks bm where b.SKU=bm.SKU group by b.sku,b.itemname,b.quantity)").Scan(&valueTotal)
+	// t := time.Now()
+	// result := Header{
+	// 	Date: t.Format("20060102"),
+	// 	ItemsAmount: itemsAmount,
+	// 	GoodsAmount: goodsAmount,
+	// 	ValueTotal: valueTotal,
+	// 	Detail: details,
+	// }
 
-	// Display modified data in JSON message "success"
-	c.JSON(200, gin.H{"success": result})
+	// // Display modified data in JSON message "success"
+	// c.JSON(200, gin.H{"success": result})
 }
