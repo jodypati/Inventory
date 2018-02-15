@@ -14,7 +14,7 @@ type Barangkeluar struct {
 	Time			time.Time `gorm:"not null" form:"time" json:"time"`
 	SKU 			string `gorm:"not null" form:"sku" json:"sku"`
 	ItemName 		string `gorm:"not null" form:"itemname" json:"itemname"`
-	StockOut  int `gorm:"not null" form:"amountrecieved" json:"amountrecieved"`
+	StockOut  int `gorm:"not null" form:"stockout" json:"stockout"`
 	SellingPrice  	float64 `gorm:"not null" form:"purchaseprice" json:"purchaseprice"`
 	Total  			float64 `gorm:"not null" form:"total" json:"total"`
 	ReceiptNumber	string `gorm:"not null" form:"receiptnumber" json:"receiptnumber"`

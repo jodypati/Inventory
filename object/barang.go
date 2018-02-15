@@ -4,6 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
 	_ "github.com/mattn/go-sqlite3"
+	"time"
 )
 type Barangs struct {
 	Id        	int    `gorm:"AUTO_INCREMENT" form:"id" json:"id"`
@@ -12,13 +13,14 @@ type Barangs struct {
 	Quantity  	int `gorm:"not null" form:"quantity" json:"quantity"`
 }
 
-type Header struct {
+type HeaderReport struct {
 	Date string `gorm:"not null" form:"date" json:"date"`
 	ItemsAmount int `gorm:"not null" form:"itemsamount" json:"itemsamount"`
 	GoodsAmount float64 `gorm:"not null" form:"goodsamount" json:"goodsamount"`
 	ValueTotal float64 `gorm:"not null" form:"valuetotal" json:"valuetotal"`
-	Detail *Detail `gorm:"not null" form:"detail" json:"detail"`
+	Detail *[]Detail `gorm:"not null" form:"detail" json:"detail"`
 }
+
 
 type Detail struct {
     SKU 		string `gorm:"not null" form:"sku" json:"sku"`
@@ -179,29 +181,36 @@ func OptionsBarang(c *gin.Context) {
 }
 
 func GoodsValueReport(c *gin.Context) {
-	// Connection to the database
-	// db := InitDbBarang()
-	// // Close connection database
-	// defer db.Close()
-	// var details []Detail
-	// var header Header
-	// var itemsAmount int
-	// var goodsAmount float64
-	// var valueTotal float64
-	// db.Exec("select b.sku,b.itemname,b.quantity,SUM(total)/SUM(amountreceived) AveragePrice, AveragePrice*b.quantity total from Barangs b,Barangmasuks bm where b.SKU=bm.SKU group by b.sku,b.itemname,b.quantity").Scan(&details)
-	// db.Exec("select count(sku) from Barangs").Scan(&itemsAmount)
-	// db.Exec("select sum(quantity) from Barangs").Scan(&goodsAmount)
-	// db.Exec("select sum(quantity) from Barangs").Scan(&valueTotal)
-	// db.Exec("select sum(totalnilai) from (select b.sku,SUM(total)/SUM(amountreceived)*b.quantity as totalnilai from Barangs b,Barangmasuks bm where b.SKU=bm.SKU group by b.sku,b.itemname,b.quantity)").Scan(&valueTotal)
-	// t := time.Now()
-	// result := Header{
-	// 	Date: t.Format("20060102"),
-	// 	ItemsAmount: itemsAmount,
-	// 	GoodsAmount: goodsAmount,
-	// 	ValueTotal: valueTotal,
-	// 	Detail: details,
-	// }
+	//Connection to the database
+	db := InitDbBarang()
+	// Close connection database
+	defer db.Close()
+	var details []Detail
+	var goodsAmount float64
+	var valueTotal float64
+	
+	db.Table("barangs").Select("barangs.sku,barangs.item_name,barangs.quantity,SUM(total)/SUM(amount_recieved) as average_price, SUM(total)/SUM(amount_recieved)*barangs.quantity as total").Joins("inner join barangmasuks on barangs.SKU=barangmasuks.SKU").Group("barangs.sku,barangs.item_name,barangs.quantity").Scan(&details)
+	
+	itemsAmount := 0;
+	for _, detail := range details {
+        goodsAmount += detail.AveragePrice
+        valueTotal += detail.Total
+        itemsAmount++
+	}
 
-	// // Display modified data in JSON message "success"
-	// c.JSON(200, gin.H{"success": result})
+
+	t := time.Now()
+	result := HeaderReport {
+		Date: t.Format("20060102"),
+		ItemsAmount: itemsAmount,
+		GoodsAmount: goodsAmount,
+		ValueTotal: valueTotal,
+		Detail: &details,
+	}
+	if itemsAmount > 0 {
+	// Display modified data in JSON message "success"
+		c.JSON(200, gin.H{"success": result})
+	}else{
+		c.JSON(404, gin.H{"error": "Report not found"})
+	}
 }
