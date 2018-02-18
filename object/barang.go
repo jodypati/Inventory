@@ -5,6 +5,10 @@ import (
 	"github.com/jinzhu/gorm"
 	_ "github.com/mattn/go-sqlite3"
 	"time"
+	"os"
+    "log"
+    "encoding/csv"
+    "strconv"
 )
 type Barangs struct {
 	Id        	int    `gorm:"AUTO_INCREMENT" form:"id" json:"id"`
@@ -28,6 +32,18 @@ type Detail struct {
 	quantity 	int `gorm:"not null" form:"quantity" json:"quantity"`
 	AveragePrice 	float64 `gorm:"not null" form:"averageprice" json:"averageprice"`
 	Total float64 `gorm:"not null" form:"total" json:"total"`
+}
+
+type SalesDetail struct {
+    BookingId 		string `gorm:"not null" form:"bookingid" json:"bookingid"`
+    Time			time.Time `gorm:"not null" form:"time" json:"time"`
+    SKU 			string `gorm:"not null" form:"sku" json:"sku"`
+	ItemName 		string `gorm:"not null" form:"itemname" json:"itemname"`
+	Quantity 		int `gorm:"not null" form:"quantity" json:"quantity"`
+	SalePrice 		float64 `gorm:"not null" form:"saleprice" json:"saleprice"`
+	TotalSale 		float64 `gorm:"not null" form:"totalsale" json:"totalsale"`
+	PurchasePrice 	float64 `gorm:"not null" form:"purchaseprice" json:"purchaseprice"`
+	Profit			float64 `gorm:"not null" form:"profit" json:"profit"`
 }
 
 func InitDbBarang() *gorm.DB {
@@ -180,6 +196,40 @@ func OptionsBarang(c *gin.Context) {
 	c.Next()
 }
 
+func ImportValueReport(c *gin.Context){
+	db := InitDbBarang()
+	// Close connection database
+	defer db.Close()
+	var details []Detail
+	var err error
+	db.Table("barangs").Select("barangs.sku,barangs.item_name,barangs.quantity,SUM(total)/SUM(amount_recieved) as average_price, SUM(total)/SUM(amount_recieved)*barangs.quantity as total").Joins("inner join barangmasuks on barangs.SKU=barangmasuks.SKU").Group("barangs.sku,barangs.item_name,barangs.quantity").Scan(&details)
+
+	file, err := os.Create("ValueReport.csv")
+    
+    if err != nil {
+        log.Fatal("Cannot create file", err)
+    }
+    defer file.Close()
+
+    writer := csv.NewWriter(file)
+    defer writer.Flush()
+	for _, detail := range details {
+        
+        data := []string{detail.SKU,detail.ItemName,strconv.Itoa(detail.quantity),strconv.FormatFloat(detail.AveragePrice, 'f', -1, 64),strconv.FormatFloat(detail.Total, 'f', -1, 64)}
+        err := writer.Write(data)
+        
+        if err != nil {
+        	log.Fatal("Cannot write file", err)
+    	}
+	}
+	if err == nil {
+        c.JSON(200, gin.H{"success": "Report Created"})
+    }else{
+    	c.JSON(404, gin.H{"error": "Cannot create file"})
+    }
+    	
+}
+
 func GoodsValueReport(c *gin.Context) {
 	//Connection to the database
 	db := InitDbBarang()
@@ -213,4 +263,39 @@ func GoodsValueReport(c *gin.Context) {
 	}else{
 		c.JSON(404, gin.H{"error": "Report not found"})
 	}
+}
+
+func SalesReport(c *gin.Context) {
+	//Connection to the database
+	db := InitDbBarang()
+	// Close connection database
+	defer db.Close()
+	var salesDetail []SalesDetail
+	// var goodsAmount float64
+	// var valueTotal float64
+	
+	db.Table("barangkeluars").Select("barangkeluars.receipt_number,barangkeluars.time,barangkeluars.sku,barangkeluars.item_name,barangkeluars.stock_out,barangkeluars.selling_price,barangkeluars.selling_price*barangkeluars.stock_out as total_sale, SUM(barangmasuks.total)/SUM(amount_recieved) as sale_price, (barangkeluars.selling_price*barangkeluars.stock_out) - (barangkeluars.stock_out * (SUM(barangmasuks.total)/SUM(amount_recieved))) as profit").Joins("inner join barangmasuks on barangkeluars.SKU=barangmasuks.SKU").Group("barangkeluars.receipt_number,barangkeluars.time,barangkeluars.sku,barangkeluars.item_name,barangkeluars.stock_out,barangkeluars.selling_price").Scan(&salesDetail)
+	c.JSON(200, gin.H{"success": salesDetail})
+	// itemsAmount := 0;
+	// for _, detail := range details {
+ //        goodsAmount += detail.AveragePrice
+ //        valueTotal += detail.Total
+ //        itemsAmount++
+	// }
+
+
+	// t := time.Now()
+	// result := HeaderReport {
+	// 	Date: t.Format("20060102"),
+	// 	ItemsAmount: itemsAmount,
+	// 	GoodsAmount: goodsAmount,
+	// 	ValueTotal: valueTotal,
+	// 	Detail: &details,
+	// }
+	// if itemsAmount > 0 {
+	// // Display modified data in JSON message "success"
+	// 	c.JSON(200, gin.H{"success": result})
+	// }else{
+	// 	c.JSON(404, gin.H{"error": "Report not found"})
+	// }
 }
