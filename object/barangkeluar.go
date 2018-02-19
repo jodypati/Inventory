@@ -7,6 +7,9 @@ import (
 	"time"
 	"bytes"
 	"strconv"
+	"os"
+    "encoding/csv"
+    "strings"
 )
 
 type Barangkeluar struct {
@@ -15,7 +18,7 @@ type Barangkeluar struct {
 	SKU 			string `gorm:"not null" form:"sku" json:"sku"`
 	ItemName 		string `gorm:"not null" form:"itemname" json:"itemname"`
 	StockOut  int `gorm:"not null" form:"stockout" json:"stockout"`
-	SellingPrice  	float64 `gorm:"not null" form:"purchaseprice" json:"purchaseprice"`
+	SellingPrice  	float64 `gorm:"not null" form:"sellingprice" json:"sellingprice"`
 	Total  			float64 `gorm:"not null" form:"total" json:"total"`
 	ReceiptNumber	string `gorm:"not null" form:"receiptnumber" json:"receiptnumber"`
 	Notes			string `gorm:"not null" form:"notes" json:"notes"`
@@ -62,7 +65,7 @@ func PostBarangkeluar(c *gin.Context) {
 		// INSERT INTO "barangkeluars" (name) VALUES (barangkeluar.Name);
 		db.Create(&barangkeluar)
 		var buffer2 bytes.Buffer
-		buffer2.WriteString("Pesanan ID-")
+		buffer2.WriteString("ID-")
 		buffer2.WriteString(t.Format("20060102"))
 		buffer2.WriteString("-")
 		buffer2.WriteString(strconv.Itoa(barangkeluar.Id))
@@ -192,4 +195,64 @@ func OptionsBarangkeluar(c *gin.Context) {
 	c.Writer.Header().Set("Access-Control-Allow-Methods", "DELETE,POST, PUT")
 	c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 	c.Next()
+}
+
+func ImportBarangKeluar(c *gin.Context){
+	filename := "barangkeluar.csv"
+	const dateFormat = "02/01/2006 15.04:05"
+    // Open CSV file
+    f, err := os.Open(filename)
+    if err != nil {
+        panic(err)
+    }
+    defer f.Close()
+
+    // Read File into a Variable
+    r := csv.NewReader(f)
+    r.Comma = (';')
+    lines, err := r.ReadAll()
+    if err != nil {
+        panic(err)
+		// Display error
+		c.JSON(422, gin.H{"error": err})
+	}else{
+		db := InitDbBarang()
+		defer db.Close()
+
+		var barangkeluars []Barangkeluar
+		// Loop through lines & turn into object
+    	for _, line := range lines {
+    		t, _ := time.Parse(dateFormat, line[0])
+    		stockout, err := strconv.Atoi(line[3])
+    		sellingprice,err := strconv.ParseFloat(line[4], 64)
+    		total,err := strconv.ParseFloat(line[5], 64)
+    		receiptnumber := ""
+    		if sellingprice != 0.0 {
+    			notes := strings.Split(line[6], " ")
+				if len(notes) > 1 {
+					receiptnumber = notes[1]
+				}
+    		}
+    		if err == nil {
+	        	barangkeluar := Barangkeluar{
+			        Time: t,
+			        SKU: line[1],
+			        ItemName: line[2],
+			        StockOut: stockout,
+			        SellingPrice: sellingprice,
+			        Total: total,
+			        ReceiptNumber: receiptnumber,
+			        Notes: line[6],
+			        
+		        } 
+		        db.Create(&barangkeluar)
+		        barangkeluars = append(barangkeluars,barangkeluar)
+	    	}else{
+	    		c.JSON(422, gin.H{"error": err})		
+	    	}
+	    }
+		
+		// Display error
+		c.JSON(200, gin.H{"success": barangkeluars})
+	}
 }

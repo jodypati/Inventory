@@ -8,6 +8,8 @@ import (
 	"bytes"
 	"strconv"
 	"strings"
+	"os"
+    "encoding/csv"
 )
 
 type Barangmasuks struct {
@@ -211,7 +213,60 @@ func DeleteBarangmasuk(c *gin.Context) {
 
 	// curl -i -X DELETE http://localhost:8080/api/v1/barangmasuks/1
 }
+func ImportBarangMasuk(c *gin.Context){
+	filename := "barangmasuk.csv"
+	const dateFormat = "02/01/2006 15.04"
+    // Open CSV file
+    f, err := os.Open(filename)
+    if err != nil {
+        panic(err)
+    }
+    defer f.Close()
 
+    // Read File into a Variable
+    r := csv.NewReader(f)
+    r.Comma = (';')
+    lines, err := r.ReadAll()
+    if err != nil {
+        panic(err)
+		// Display error
+		c.JSON(422, gin.H{"error": err})
+	}else{
+		db := InitDbBarang()
+		defer db.Close()
+
+		var barangmasuks []Barangmasuks
+		// Loop through lines & turn into object
+    	for _, line := range lines {
+    		t, _ := time.Parse(dateFormat, line[0])
+    		orderamount, err := strconv.Atoi(line[3])
+    		amountrecieved, err := strconv.Atoi(line[4])
+    		purchaseprice,err := strconv.ParseFloat(line[5], 64)
+    		total,err := strconv.ParseFloat(line[6], 64)
+    		if err == nil {
+	        	barangmasuk := Barangmasuks{
+			        Time: t,
+			        SKU: line[1],
+			        ItemName: line[2],
+			        OrderAmount: orderamount,
+			        AmountRecieved: amountrecieved,
+			        PurchasePrice: purchaseprice,
+			        Total: total,
+			        ReceiptNumber: line[7],
+			        Notes: line[8],
+			        
+		        } 
+		        db.Create(&barangmasuk)
+		        barangmasuks = append(barangmasuks,barangmasuk)
+	    	}else{
+	    		c.JSON(422, gin.H{"error": err})		
+	    	}
+	    }
+		
+		// Display error
+		c.JSON(200, gin.H{"success": barangmasuks})
+	}
+}
 func OptionsBarangmasuk(c *gin.Context) {
 	c.Writer.Header().Set("Access-Control-Allow-Methods", "DELETE,POST, PUT")
 	c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type")
