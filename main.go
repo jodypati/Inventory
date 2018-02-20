@@ -26,6 +26,12 @@ func main() {
 		v1.PUT("/barangs/:sku", object.UpdateBarang)
 		v1.DELETE("/barangs/:sku", object.DeleteBarang)
 		v1.GET("/laporannilaibarang", object.GoodsValueReport)
+		v1.GET("/importbarang", object.ImportBarang)
+		v1.GET("/importbarangmasuk", object.ImportBarangMasuk)
+		v1.GET("/importbarangkeluar", object.ImportBarangKeluar)
+		v1.GET("/exportreport", object.ExportValueReport)
+		v1.GET("/laporanpenjualan/:datefrom/:dateto", object.SalesReport)
+		v1.GET("/truncate", object.TruncateAll)
 
 		v1.POST("/barangmasuks", object.PostBarangmasuk)
 		v1.GET("/barangmasuks", object.GetBarangmasuks)
